@@ -1,0 +1,24 @@
+{
+  "version": "20261117.062830",
+  "modules": [
+    "admin.js",
+    "ao.js",
+    "app.js",
+    "art.js",
+    "batching.js",
+    "config.js",
+    "engine.js",
+    "exhibits.js",
+    "furniture.js",
+    "materials.js",
+    "music.js",
+    "player.js",
+    "reflections.js",
+    "rooms.js",
+    "rotunda.js",
+    "textures.js",
+    "ui.js",
+    "util.js",
+    "world.js"
+  ]
+}

@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+  <title>David Destroyers Digital Exhibit</title>
+  <link rel="icon" href="data:," />
+  <link rel="stylesheet" href="css/style.css?v=4" />
+</head>
+<body>
+  <div id="app"></div>
+  <div id="vignette"></div>
+
+  <!-- HUD -->
+  <div id="crosshair"></div>
+  <div id="room-label"></div>
+  <div id="prompt" class="hidden"></div>
+  <canvas id="minimap" width="220" height="220"></canvas>
+
+  <!-- Touch controls (phone / tablet mode only) -->
+  <div id="hud-buttons">
+    <button id="music-hud" class="hud-btn" aria-label="Toggle music">&#9835;</button>
+    <button id="map-hud" class="hud-btn" aria-label="Toggle map">&#9638;</button>
+    <button id="menu-hud" class="hud-btn" aria-label="Pause menu">&#9776;</button>
+  </div>
+  <div id="joystick"><div id="joystick-knob"></div></div>
+  <button id="jump-btn" aria-label="Jump">Jump</button>
+  <div id="update-banner" class="hidden">The museum has just been updated. <button id="update-reload">Reload</button></div>
+
+  <!-- Start / pause screen -->
+  <div id="overlay">
+    <div class="card">
+      <h1 id="museum-title"></h1>
+      <p id="museum-subtitle"></p>
+      <div class="enter-buttons">
+        <button id="enter-btn" class="primary">Enter with mouse &amp; keyboard</button>
+        <button id="enter-touch-btn">Enter on phone / tablet</button>
+      </div>
+      <div class="settings">
+        <button id="music-btn" class="text-btn"></button>
+        <button id="quality-btn" class="text-btn"></button>
+        <button id="admin-btn" class="text-btn">&#128274; Admin mode</button>
+      </div>
+      <h3>Mouse &amp; keyboard</h3>
+      <ul class="controls">
+        <li><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> walk</li>
+        <li><kbd>Mouse</kbd> look around</li>
+        <li><kbd>Shift</kbd> walk faster &nbsp;<kbd>Space</kbd> jump</li>
+        <li><kbd>E</kbd> or <kbd>Click</kbd> view an exhibit</li>
+        <li><kbd>1</kbd>–<kbd>9</kbd> jump to a room</li>
+        <li><kbd>M</kbd> map &nbsp;<kbd>N</kbd> music</li>
+        <li><kbd>Esc</kbd> pause</li>
+      </ul>
+      <h3>Phone &amp; tablet</h3>
+      <ul class="controls">
+        <li>Left thumb stick: walk</li>
+        <li>Drag anywhere else: look around</li>
+        <li>Jump button: jump</li>
+        <li>Tap an exhibit: view it</li>
+        <li>Turn your phone sideways for the best view</li>
+      </ul>
+      <p id="credits"></p>
+    </div>
+  </div>
+
+  <!-- Exhibit detail panel -->
+  <div id="info-panel" class="hidden" role="dialog" aria-modal="true">
+    <div class="card">
+      <button id="info-close" aria-label="Close">&times;</button>
+      <p id="info-room"></p>
+      <h2 id="info-title"></h2>
+      <p id="info-subtitle"></p>
+      <img id="info-image" alt="" />
+      <div id="info-body"></div>
+      <p class="hint"><span class="desktop-only">Press <kbd>E</kbd> or <kbd>Esc</kbd> to return to the museum</span><span class="touch-only">Tap &times; to return to the museum</span></p>
+    </div>
+  </div>
+
+  <!--
+    Always run the newest code: version.json is fetched fresh, and its version number is added to
+    every one of our script files (listed in version.json), so a browser can never mix in an old
+    cached copy. Run `node tools/release.mjs` whenever the code changes.
+  -->
+  <script>
+    (async () => {
+      let release = { version: Date.now().toString(36), modules: ['app.js'] };
+      try {
+        const res = await fetch('version.json?t=' + Date.now(), { cache: 'no-store' });
+        if (res.ok) release = await res.json();
+      } catch {}
+      window.MUSEUM_VERSION = release.version;
+      const imports = { three: './lib/three/build/three.module.js', 'three/addons/': './lib/three/examples/jsm/' };
+      for (const file of release.modules) imports[new URL('js/' + file, location.href).href] = './js/' + file + '?v=' + release.version;
+      const map = document.createElement('script');
+      map.type = 'importmap';
+      map.textContent = JSON.stringify({ imports });
+      document.head.append(map);
+      const app = document.createElement('script');
+      app.type = 'module';
+      app.src = 'js/app.js?v=' + release.version;
+      document.body.append(app);
+    })();
+  </script>
+</body>
+</html>
