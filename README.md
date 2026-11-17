@@ -2,6 +2,8 @@
 
 A 3D walk-through museum that runs in the web browser, built with [Three.js](https://threejs.org/).
 
+**Visit it:** https://tltunney.github.io/DavidDestroyersExhibit.V3/
+
 **Thesis (short version):** Debt doesn't decide who succeeds. It decides what trying costs, how you have to pay,
 and what failing takes from you. The full thesis hangs in the domed Rotunda, behind a full-length marble statue of David Copperfield.
 
