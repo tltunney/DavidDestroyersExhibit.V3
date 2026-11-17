@@ -6,16 +6,27 @@ export const SMALL_SCREEN = window.matchMedia('(pointer: coarse)').matches; // p
 export const EYE_HEIGHT = 1.7;
 
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
-// At most 1.5 pixels per screen pixel: sharper than that costs a lot and looks the same.
-// app.js lowers it further on computers that can't keep up.
-export const MAX_PIXEL_RATIO = Math.min(window.devicePixelRatio, 1.5);
+// Laptops with built-in (integrated) graphics, phones and tablets get the lighter settings.
+export const BUILT_IN_GRAPHICS = (() => {
+  try {
+    const gl = renderer.getContext();
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : '';
+    return /Intel|Iris|UHD|HD Graphics|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic/i.test(name);
+  } catch {
+    return false;
+  }
+})();
+// At most 1.5 pixels per screen pixel (sharper costs a lot and looks the same), and one pixel per
+// screen pixel on built-in graphics. app.js lowers it further on computers that can't keep up.
+export const MAX_PIXEL_RATIO = Math.min(window.devicePixelRatio, BUILT_IN_GRAPHICS ? 1 : 1.5);
 renderer.setPixelRatio(MAX_PIXEL_RATIO);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.AgXToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+renderer.shadowMap.type = THREE.PCFShadowMap; // the soft kind samples far more for little visible gain
 // Nothing that casts a shadow ever moves, so shadows are drawn once (and again when something
 // loads) instead of on every frame.
 renderer.shadowMap.autoUpdate = false;

@@ -48,14 +48,16 @@ export function buildRoom(room) {
   floorMat.needsUpdate = true;
 }
 
-// Period rooms: a brass chandelier (passages: just a warm light). Modern galleries: linear LED strips,
+// Period rooms: a brass chandelier and its warm light (a short passage is lit well enough by the
+// rooms at either end, and every extra light costs on every pixel). Modern galleries: linear LED strips,
 // a glowing cove around the edge, and one real light (real lights are expensive, so we keep them few).
 function buildLights(room) {
   const { x, z, w, d, height } = room;
   if (room.victorian) {
-    if (!room.passage) buildChandelier(room);
+    if (room.passage) return;
+    buildChandelier(room);
     const light = new THREE.PointLight(0xffd9a8, ROOM_LIGHT * 1.1 * (height / DEFAULT_HEIGHT), Math.max(w, d) * 1.2, 1);
-    light.position.set(x, height - (room.passage ? 0.8 : 1.1), z);
+    light.position.set(x, height - 1.1, z);
     parent.add(light);
     return;
   }

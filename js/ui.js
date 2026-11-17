@@ -2,7 +2,7 @@
 // label and minimap, music and graphics settings, admin mode, keyboard and touch controls.
 import * as THREE from 'three';
 import { MUSEUM, ROOMS } from './config.js';
-import { renderer, camera, SMALL_SCREEN } from './engine.js';
+import { renderer, camera, SMALL_SCREEN, BUILT_IN_GRAPHICS } from './engine.js';
 import { VISIT_ROOMS, outline, roomAt } from './world.js';
 import { controls, state, isPlaying, keys, joystick, jump, teleportTo, exhibitAt } from './player.js';
 import { AmbientMusic } from './music.js';
@@ -47,17 +47,7 @@ document.addEventListener('visibilitychange', () => music.setVisible(!document.h
 // ---------------------------------------------------------------- graphics quality
 // "high" adds soft contact shadows and glow. Phones, tablets and computers with built-in
 // (integrated) graphics start on "standard"; app.js also steps down on its own if frames are slow.
-function builtInGraphics() {
-  try {
-    const gl = renderer.getContext();
-    const info = gl.getExtension('WEBGL_debug_renderer_info');
-    const name = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : '';
-    return /Intel|Iris|UHD|HD Graphics|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic/i.test(name);
-  } catch {
-    return false;
-  }
-}
-let quality = SMALL_SCREEN || builtInGraphics() ? 'standard' : 'high';
+let quality = SMALL_SCREEN || BUILT_IN_GRAPHICS ? 'standard' : 'high';
 try {
   quality = localStorage.getItem('museum-graphics') ?? quality; // only a choice made in the menu is saved
 } catch {}
@@ -316,33 +306,50 @@ function layoutMap() {
 }
 const mapCtx = ui.minimap.getContext('2d');
 const facing = new THREE.Vector3();
+// The floor plan is drawn once per room change into a hidden canvas; each frame only copies it and
+// draws the arrow, and only when the visitor has moved or turned.
+const mapBase = document.createElement('canvas');
+let mapBaseRoom = undefined;
+let lastArrow = '';
 function drawMinimap() {
   if (!OUTLINES) layoutMap();
-  const ctx = mapCtx;
-  ctx.clearRect(0, 0, ui.minimap.width, ui.minimap.height);
-  ctx.font = '11px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'middle';
-  for (const r of ROOMS) {
-    ctx.beginPath();
-    OUTLINES.get(r).forEach((p, k) => (k ? ctx.lineTo(...toMap(p.x, p.z)) : ctx.moveTo(...toMap(p.x, p.z))));
-    ctx.closePath();
-    ctx.fillStyle = r === currentRoom ? 'rgba(217,164,65,0.45)' : 'rgba(255,255,255,0.12)';
-    ctx.fill();
-    ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-    const n = VISIT_ROOMS.indexOf(r);
-    if (n < 0) continue;
-    ctx.fillStyle = 'rgba(255,255,255,0.75)';
-    ctx.fillText(String(n + 1), ...toMap(r.x, r.z));
+  if (mapBaseRoom !== currentRoom) {
+    mapBaseRoom = currentRoom;
+    lastArrow = '';
+    mapBase.width = ui.minimap.width;
+    mapBase.height = ui.minimap.height;
+    const base = mapBase.getContext('2d');
+    base.font = '11px sans-serif';
+    base.textAlign = 'center';
+    base.textBaseline = 'middle';
+    for (const r of ROOMS) {
+      base.beginPath();
+      OUTLINES.get(r).forEach((p, k) => (k ? base.lineTo(...toMap(p.x, p.z)) : base.moveTo(...toMap(p.x, p.z))));
+      base.closePath();
+      base.fillStyle = r === currentRoom ? 'rgba(217,164,65,0.45)' : 'rgba(255,255,255,0.12)';
+      base.fill();
+      base.strokeStyle = 'rgba(255,255,255,0.6)';
+      base.lineWidth = 1;
+      base.stroke();
+      const n = VISIT_ROOMS.indexOf(r);
+      if (n < 0) continue;
+      base.fillStyle = 'rgba(255,255,255,0.75)';
+      base.fillText(String(n + 1), ...toMap(r.x, r.z));
+    }
   }
   // the visitor, as an arrow
   const [px, py] = toMap(camera.position.x, camera.position.z);
   camera.getWorldDirection(facing);
+  const angle = Math.atan2(facing.z, facing.x);
+  const key = `${px.toFixed(1)},${py.toFixed(1)},${angle.toFixed(2)}`;
+  if (key === lastArrow) return;
+  lastArrow = key;
+  const ctx = mapCtx;
+  ctx.clearRect(0, 0, ui.minimap.width, ui.minimap.height);
+  ctx.drawImage(mapBase, 0, 0);
   ctx.save();
   ctx.translate(px, py);
-  ctx.rotate(Math.atan2(facing.z, facing.x));
+  ctx.rotate(angle);
   ctx.fillStyle = '#ff5a4f';
   ctx.beginPath();
   ctx.moveTo(8, 0);
@@ -354,8 +361,10 @@ function drawMinimap() {
 }
 
 // Called every frame by app.js.
+let uiFrame = 0;
 export function updateUI() {
-  updateFocus();
+  // what you're looking at only needs checking a few times a second, not every frame
+  if (uiFrame++ % 4 === 0) updateFocus();
   updateRoomLabel();
   drawMinimap();
 }

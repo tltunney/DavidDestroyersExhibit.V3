@@ -38,8 +38,11 @@ const built = ROOMS.map((room) => {
 });
 buildInto(scene, { x: 0, z: 0, rot: 0 });
 scene.add(new THREE.HemisphereLight(0xfff6ea, 0x4a3f35, 0.6));
-captureReflectionsWhenLoaded(built);
+// prepare every shader now (behind the start screen), so no room stutters the first time it's seen;
+// again once reflections have been added, since that changes the materials
+captureReflectionsWhenLoaded(built, () => renderer.compile(scene, camera));
 refreshShadows();
+renderer.compile(scene, camera);
 
 const spawn = MUSEUM.spawn ?? {};
 placePlayer(spawn.x ?? ROOMS[0].x, spawn.z ?? ROOMS[0].z, spawn.facing ?? 'north');
@@ -78,12 +81,15 @@ window.addEventListener('resize', () => {
 });
 
 // ---------------------------------------------------------------- keeping it smooth
-// Every two seconds of walking, check the frame rate. If the computer can't keep up, first draw
-// fewer pixels (down to one per screen pixel), then switch off the high-graphics effects, then
-// draw fewer pixels still. When there's room to spare again, sharpness comes back.
+// Every two seconds of walking, check the frame rate. Below 50 frames a second, first draw fewer
+// pixels (down to one per screen pixel), then switch off the high-graphics effects, then draw fewer
+// pixels still. Sharpness comes back only after a run of smooth checks, and never to a level that
+// already proved too slow, so it settles instead of bouncing up and down.
 const MIN_PIXEL_RATIO = 0.7;
 let sampleStart = performance.now();
 let sampleFrames = 0;
+let smoothRuns = 0;
+let ceiling = MAX_PIXEL_RATIO;
 function keepSmooth(now) {
   sampleFrames++;
   const elapsed = now - sampleStart;
@@ -94,11 +100,16 @@ function keepSmooth(now) {
   if (!isPlaying() || document.hidden) return; // menus and paused tabs don't count
   const current = renderer.getPixelRatio();
   let next = current;
-  if (fps < 40) {
+  if (fps < 50) {
+    smoothRuns = 0;
     if (current > 1) next = Math.max(1, current - 0.25);
     else if (getQuality() === 'high') setQuality('standard', { auto: true });
-    else next = Math.max(MIN_PIXEL_RATIO, current - 0.15);
-  } else if (fps > 56 && current < MAX_PIXEL_RATIO) next = Math.min(MAX_PIXEL_RATIO, current + 0.1);
+    else next = Math.max(MIN_PIXEL_RATIO, current - 0.1);
+    if (next < current) ceiling = Math.min(ceiling, current - 0.05);
+  } else if (fps > 58 && ++smoothRuns >= 3 && current + 0.1 <= ceiling) {
+    smoothRuns = 0;
+    next = current + 0.1;
+  }
   if (next !== current) {
     renderer.setPixelRatio(next);
     renderer.setSize(window.innerWidth, window.innerHeight);

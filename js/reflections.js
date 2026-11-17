@@ -6,12 +6,15 @@ import * as THREE from 'three';
 import { renderer, scene, SMALL_SCREEN, refreshShadows } from './engine.js';
 
 // rooms: [{ room, group }]. Waits for textures and models to finish loading, then captures.
-export function captureReflectionsWhenLoaded(rooms) {
+export function captureReflectionsWhenLoaded(rooms, onDone = () => {}) {
   let done = false;
   const go = () => {
     if (done) return;
     done = true;
-    requestAnimationFrame(() => capture(rooms)); // one frame so new textures are on the GPU
+    requestAnimationFrame(() => {
+      capture(rooms); // one frame later, so new textures are on the GPU
+      onDone();
+    });
   };
   THREE.DefaultLoadingManager.onLoad = go;
   setTimeout(go, 12000); // don't wait forever on a slow connection
