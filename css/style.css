@@ -152,6 +152,8 @@ kbd {
   color: #111;
 }
 .enter-buttons button:hover { filter: brightness(1.15); }
+.enter-buttons button:disabled { opacity: 0.45; cursor: wait; filter: none; }
+#loading-note { margin: 0.6rem 0 0; font-size: 0.9rem; opacity: 0.8; }
 
 .settings {
   display: flex;

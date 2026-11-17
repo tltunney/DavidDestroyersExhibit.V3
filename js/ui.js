@@ -76,6 +76,16 @@ if (SMALL_SCREEN) {
   ui.enterTouch.classList.add('primary');
   ui.enterTouch.parentElement.prepend(ui.enterTouch);
 }
+// While the museum is being built and prepared, the enter buttons wait and say what's happening.
+const loadingNote = document.createElement('p');
+loadingNote.id = 'loading-note';
+ui.enter.parentElement.after(loadingNote);
+export function setLoading(text) {
+  loadingNote.textContent = text ?? '';
+  loadingNote.classList.toggle('hidden', !text);
+  ui.enter.disabled = ui.enterTouch.disabled = !!text;
+}
+setLoading('Opening the doors…');
 function showMenu() {
   keys.clear();
   ui.enter.textContent = 'Resume with mouse & keyboard';

@@ -5,6 +5,17 @@
 import * as THREE from 'three';
 import { renderer, scene, SMALL_SCREEN, refreshShadows } from './engine.js';
 
+// Keep count of pictures and models still loading (from the moment this file is imported, before
+// any room is built), so we know whether everything has already arrived by the time we ask.
+let loading = 0;
+let whenLoaded = null;
+const manager = THREE.DefaultLoadingManager;
+manager.onStart = manager.onProgress = (url, loaded, total) => (loading = total - loaded);
+manager.onLoad = () => {
+  loading = 0;
+  whenLoaded?.();
+};
+
 // rooms: [{ room, group }]. Waits for textures and models to finish loading, then captures.
 export function captureReflectionsWhenLoaded(rooms, onDone = () => {}) {
   let done = false;
@@ -16,7 +27,8 @@ export function captureReflectionsWhenLoaded(rooms, onDone = () => {}) {
       onDone();
     });
   };
-  THREE.DefaultLoadingManager.onLoad = go;
+  if (loading === 0) go();
+  else whenLoaded = go;
   setTimeout(go, 12000); // don't wait forever on a slow connection
 }
 

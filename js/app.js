@@ -8,13 +8,13 @@ import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js'
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { MUSEUM, ROOMS } from './config.js';
 import { renderer, scene, camera, MAX_PIXEL_RATIO, refreshShadows } from './engine.js';
-import { prepareRooms, buildInto, roomFrame, animators } from './world.js';
+import { prepareRooms, buildInto, roomFrame, roomAt, animators } from './world.js';
 import { buildRoom } from './rooms.js';
 import { buildRotunda } from './rotunda.js';
 import { captureReflectionsWhenLoaded } from './reflections.js';
 import { mergeStatic } from './batching.js';
 import { placePlayer, teleportTo, updateMovement, blocked, isPlaying } from './player.js';
-import { updateUI, onQualityChange, getQuality, setQuality, music } from './ui.js';
+import { updateUI, onQualityChange, getQuality, setQuality, setLoading, music } from './ui.js';
 
 // Text and photos added in admin mode live in content/exhibits.json, keyed by exhibit id, and are
 // laid over what config.js says. It's fetched fresh every time so edits show up right away.
@@ -23,8 +23,13 @@ const content = await fetch(`content/exhibits.json?t=${Date.now()}`, { cache: 'n
   .catch(() => ({}));
 prepareRooms(content);
 
-// build each room in its own placed-and-turned group
-const built = ROOMS.map((room) => {
+// Build each room in its own placed-and-turned group. The page gets a moment to breathe between
+// rooms, so the start screen keeps responding while the museum is put together.
+const pause = () => new Promise((resolve) => setTimeout(resolve, 0));
+const built = [];
+for (const [i, room] of ROOMS.entries()) {
+  setLoading(`Building the rooms (${i + 1} of ${ROOMS.length})…`);
+  await pause();
   const group = new THREE.Group();
   group.position.set(room.x, 0, room.z);
   group.rotation.y = room.rot ?? 0;
@@ -34,15 +39,79 @@ const built = ROOMS.map((room) => {
   if (room.shape === 'octagon') buildRotunda(local, group);
   else buildRoom(local);
   mergeStatic(group);
-  return { room, group };
-});
+  built.push({ room, group });
+}
 buildInto(scene, { x: 0, z: 0, rot: 0 });
 scene.add(new THREE.HemisphereLight(0xfff6ea, 0x4a3f35, 0.6));
-// prepare every shader now (behind the start screen), so no room stutters the first time it's seen;
-// again once reflections have been added, since that changes the materials
-captureReflectionsWhenLoaded(built, () => renderer.compile(scene, camera));
-refreshShadows();
-renderer.compile(scene, camera);
+// Lights live outside the rooms, so hiding a far-away room (below) never changes how many lights
+// there are, which would make every material rebuild its shader and stutter.
+scene.updateMatrixWorld(true);
+for (const { group } of built) {
+  const lights = [];
+  group.traverse((o) => o.isLight && lights.push(o));
+  for (const light of lights) scene.attach(light);
+}
+
+// ---------------------------------------------------------------- only draw what can be seen
+// A room is drawn only when you are in it or could see into it: the rooms next door, and the rooms
+// beyond the passage or the rotunda, which you can see straight across. Everything else stays hidden.
+const neighbours = new Map(ROOMS.map((r) => [r, new Set()]));
+for (const room of ROOMS) {
+  const links = [...Object.values(room.doors).flat(), ...room.openings].map((d) => d.to).filter(Boolean);
+  for (const other of links) {
+    neighbours.get(room).add(other);
+    neighbours.get(other).add(room);
+  }
+}
+const seeThrough = (r) => r.passage || r.shape === 'octagon';
+function visibleFrom(room) {
+  const seen = new Set([room, ...neighbours.get(room)]);
+  for (const next of neighbours.get(room)) if (seeThrough(next) || seeThrough(room)) for (const far of neighbours.get(next)) seen.add(far);
+  return seen;
+}
+let shownFrom = null;
+function showNearby() {
+  // shadows are drawn only now and then, and must include every room when they are
+  if (renderer.shadowMap.needsUpdate) return showAll();
+  const room = roomAt(camera.position.x, camera.position.z);
+  if (!room || room === shownFrom) return; // standing in a doorway: keep what was shown
+  shownFrom = room;
+  const seen = visibleFrom(room);
+  for (const { room: r, group } of built) group.visible = seen.has(r);
+}
+function showAll() {
+  shownFrom = null;
+  for (const { group } of built) group.visible = true;
+}
+
+// ---------------------------------------------------------------- getting ready behind the start screen
+// Every shader is compiled and every texture sent to the graphics chip before the doors open, so
+// nothing has to be prepared (and stutter) the first time a room comes into view. The reflections
+// are photographed first, once the pictures and the statue have loaded, as they change the materials.
+function uploadTextures() {
+  const seen = new Set();
+  scene.traverse((o) => {
+    for (const m of [o.material].flat()) {
+      if (!m) continue;
+      for (const value of Object.values(m)) if (value?.isTexture && !seen.has(value)) seen.add(value);
+    }
+  });
+  for (const t of seen) if (!t.isRenderTargetTexture) renderer.initTexture(t);
+}
+function prepare() {
+  showAll();
+  renderer.compile(scene, camera);
+  uploadTextures();
+  refreshShadows();
+}
+setLoading('Hanging the pictures…');
+await pause();
+prepare(); // what's there so far, so the first look around is already smooth
+captureReflectionsWhenLoaded(built, () => {
+  prepare();
+  renderer.render(scene, camera); // draws the shadows once, with every room shown
+  setLoading(null);
+});
 
 const spawn = MUSEUM.spawn ?? {};
 placePlayer(spawn.x ?? ROOMS[0].x, spawn.z ?? ROOMS[0].z, spawn.facing ?? 'north');
@@ -125,6 +194,7 @@ renderer.setAnimationLoop((now) => {
   updateMovement(dt);
   for (const animate of animators) animate(clock.elapsedTime);
   updateUI();
+  showNearby();
   if (getQuality() === 'high' && composer) composer.render(dt);
   else renderer.render(scene, camera);
 });

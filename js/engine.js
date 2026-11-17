@@ -5,18 +5,21 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 export const SMALL_SCREEN = window.matchMedia('(pointer: coarse)').matches; // phones and tablets
 export const EYE_HEIGHT = 1.7;
 
-export const renderer = new THREE.WebGLRenderer({ antialias: true });
-// Laptops with built-in (integrated) graphics, phones and tablets get the lighter settings.
+// Laptops with built-in (integrated) graphics, phones and tablets get the lighter settings. Asked
+// of a throwaway canvas, because it decides how the real renderer is made.
 export const BUILT_IN_GRAPHICS = (() => {
   try {
-    const gl = renderer.getContext();
+    const gl = document.createElement('canvas').getContext('webgl2', { powerPreference: 'high-performance' });
     const info = gl.getExtension('WEBGL_debug_renderer_info');
     const name = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : '';
+    gl.getExtension('WEBGL_lose_context')?.loseContext();
     return /Intel|Iris|UHD|HD Graphics|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic/i.test(name);
   } catch {
     return false;
   }
 })();
+// Smoothed edges (multisampling) cost built-in graphics a lot of memory traffic on every frame.
+export const renderer = new THREE.WebGLRenderer({ antialias: !BUILT_IN_GRAPHICS, powerPreference: 'high-performance' });
 // At most 1.5 pixels per screen pixel (sharper costs a lot and looks the same), and one pixel per
 // screen pixel on built-in graphics. app.js lowers it further on computers that can't keep up.
 export const MAX_PIXEL_RATIO = Math.min(window.devicePixelRatio, BUILT_IN_GRAPHICS ? 1 : 1.5);
