@@ -18,7 +18,7 @@ export function buildRotunda(room, group) {
   const faceW = 2 * a * Math.tan(Math.PI / 8);
   const roomPlace = { ...frame };
 
-  const floorMat = new THREE.MeshPhysicalMaterial({ map: floorTexture(room, R), roughness: 0.18, clearcoat: 0.6, clearcoatRoughness: 0.08 }); // polished stone
+  const floorMat = new THREE.MeshStandardMaterial({ map: floorTexture(room, R), roughness: 0.18}); // polished stone
   const floor = new THREE.Mesh(new THREE.CircleGeometry(R, 8, Math.PI / 8), floorMat);
   floor.rotation.x = -Math.PI / 2;
   floor.receiveShadow = true;
@@ -160,7 +160,7 @@ function floorTexture(room, R) {
 // Marble columns in the corners, with gilt capitals.
 function buildColumns(room, R, H) {
   const shaftH = H - 1.15;
-  const columnMat = new THREE.MeshPhysicalMaterial({ ...surfaceMaps('marble', '#ece6da', 1, 2), roughness: 1, clearcoat: 0.35, clearcoatRoughness: 0.2 });
+  const columnMat = new THREE.MeshStandardMaterial({ ...surfaceMaps('marble', '#ece6da', 1, 2), roughness: 1});
   const parts = [
     [new THREE.BoxGeometry(1, 0.28, 1), columnMat, 0.14], // plinth
     [new THREE.CylinderGeometry(0.42, 0.46, 0.16, 32), columnMat, 0.36], // base

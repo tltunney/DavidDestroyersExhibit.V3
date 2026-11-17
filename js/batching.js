@@ -8,7 +8,7 @@ import { blockers } from './world.js';
 const keep = (mesh) => {
   if (!mesh.isMesh || mesh.isInstancedMesh || Array.isArray(mesh.material)) return true;
   const m = mesh.material;
-  if ((m.transparent && !m.userData.mergeable) || m.emissiveMap || m.transmission) return true; // glass, decals, pictures and text
+  if ((m.transparent && !m.userData.mergeable) || m.emissiveMap) return true; // glass, decals, pictures and text
   if (mesh.userData.exhibit || blockers.includes(mesh)) return true; // clicked, or blocks clicks
   for (let o = mesh; o; o = o.parent) if (o.userData.dynamic || !o.visible) return true;
   return false;

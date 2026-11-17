@@ -3,8 +3,9 @@ import * as THREE from 'three';
 import { surfaceMaps } from './textures.js';
 import { canvasTexture } from './util.js';
 
-const physicalGlass = (color, opacity) =>
-  new THREE.MeshPhysicalMaterial({ color, roughness: 0.02, metalness: 0, ior: 1.5, thickness: 0.01, transparent: true, opacity, depthWrite: false, envMapIntensity: 1.4 });
+// glass: clear, with a polished reflection of the room
+const glass = (color, opacity) =>
+  new THREE.MeshStandardMaterial({ color, roughness: 0.02, metalness: 0, transparent: true, opacity, depthWrite: false, envMapIntensity: 1.4 });
 
 export const MAT = {
   frame: new THREE.MeshStandardMaterial({ color: 0xb48a5c, roughness: 0.45 }),
@@ -16,41 +17,25 @@ export const MAT = {
   brass: new THREE.MeshStandardMaterial({ color: 0xc9a35a, roughness: 0.25, metalness: 1 }),
   rope: new THREE.MeshStandardMaterial({ color: 0x5c0f16, roughness: 0.85 }),
   leather: new THREE.MeshStandardMaterial({ ...surfaceMaps('leather', '#3a2a20', 4.8, 1.2), roughness: 1 }),
-  mahogany: new THREE.MeshPhysicalMaterial({ color: 0x4a2216, roughness: 0.38, clearcoat: 0.35, clearcoatRoughness: 0.25 }), // french-polished
+  mahogany: new THREE.MeshStandardMaterial({ color: 0x4a2216, roughness: 0.38}), // french-polished
   gilt: new THREE.MeshStandardMaterial({ color: 0xc9a24f, roughness: 0.3, metalness: 1 }),
   plasterwork: new THREE.MeshStandardMaterial({ ...surfaceMaps('plaster', '#efe6d4', 1, 1), roughness: 1 }),
-  velvet: new THREE.MeshPhysicalMaterial({ ...surfaceMaps('tufted', '#1d3b2a', 4.4, 1.5), roughness: 1, sheen: 1, sheenRoughness: 0.45, sheenColor: new THREE.Color(0x4f7a62) }),
+  velvet: new THREE.MeshStandardMaterial({ ...surfaceMaps('tufted', '#1d3b2a', 4.4, 1.5), roughness: 1 }),
   gaslight: new THREE.MeshBasicMaterial({ color: new THREE.Color(2.4, 1.7, 0.95) }),
   counterTop: new THREE.MeshStandardMaterial({ ...surfaceMaps('marble', '#e6dfd2', 2, 0.5), roughness: 1 }),
   felt: new THREE.MeshStandardMaterial({ color: 0x23402f, roughness: 0.95 }),
   paper: new THREE.MeshStandardMaterial({ color: 0xf3ecdc, roughness: 0.9 }),
   bookCover: new THREE.MeshStandardMaterial({ color: 0x5c1a1e, roughness: 0.6 }),
   bankerGreen: new THREE.MeshStandardMaterial({ color: 0x1f6b3a, emissive: 0x0b3a1c, roughness: 0.15, side: THREE.DoubleSide }),
-  ceramic: new THREE.MeshPhysicalMaterial({ color: 0x2c5a4c, roughness: 0.18, clearcoat: 1, clearcoatRoughness: 0.08 }), // glazed
+  ceramic: new THREE.MeshStandardMaterial({ color: 0x2c5a4c, roughness: 0.18}), // glazed
   stem: new THREE.MeshStandardMaterial({ color: 0x3e7a3b, roughness: 0.7 }),
   soil: new THREE.MeshStandardMaterial({ color: 0x3b2a1d, roughness: 1 }),
-  // glass: real see-through refraction on high graphics (see setGlassQuality), plain transparency on phones
-  glass: physicalGlass(0xdfe8ee, 0.25),
-  caseGlass: physicalGlass(0xeef4f2, 0.22),
+  glass: glass(0xdfe8ee, 0.25),
+  caseGlass: glass(0xeef4f2, 0.22),
   // brighter than white so the light strips glow (and bloom) after tone mapping
   light: new THREE.MeshBasicMaterial({ color: new THREE.Color(3, 2.85, 2.6) }),
   sky: new THREE.MeshBasicMaterial({ color: new THREE.Color(1.6, 1.8, 2.1) }),
 };
-
-// Per-room copies of shared materials (made by reflections.js), so settings reach them too.
-export const materialCopies = new Map();
-const withCopies = (m) => [m, ...(materialCopies.get(m) ?? [])];
-
-// High graphics: glass refracts what is behind it. Standard: lighter, plain transparency.
-let glassHigh = false;
-export function setGlassQuality(high = glassHigh) {
-  glassHigh = high;
-  for (const m of [MAT.glass, MAT.caseGlass].flatMap(withCopies)) {
-    m.transmission = high ? 1 : 0;
-    m.opacity = high ? 1 : 0.24;
-    m.needsUpdate = true;
-  }
-}
 
 // Material that stays readable regardless of lighting (art, labels, wall text).
 // `layer` nudges it in front of whatever it sits on, so the two never flicker on phones.

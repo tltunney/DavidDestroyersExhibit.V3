@@ -267,7 +267,7 @@ function buildTracks(room) {
 
 // Brass gasolier: a plaster ceiling rose, a drop rod, a turned brass column and eight curving arms,
 // each ending in a frosted globe with a cut-glass drop hanging beneath it.
-const CRYSTAL = new THREE.MeshPhysicalMaterial({ color: 0xffffff, roughness: 0.02, metalness: 0, ior: 1.6, transparent: true, opacity: 0.55, envMapIntensity: 2 });
+const CRYSTAL = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.02, metalness: 0, transparent: true, opacity: 0.55, envMapIntensity: 2 });
 CRYSTAL.userData.mergeable = true; // small beads: fine to draw together even though see-through
 function buildChandelier(room) {
   const g = new THREE.Group();

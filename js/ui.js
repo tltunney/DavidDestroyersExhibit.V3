@@ -5,7 +5,6 @@ import { MUSEUM, ROOMS } from './config.js';
 import { renderer, camera, SMALL_SCREEN } from './engine.js';
 import { VISIT_ROOMS, outline, roomAt } from './world.js';
 import { controls, state, isPlaying, keys, joystick, jump, teleportTo, exhibitAt } from './player.js';
-import { setGlassQuality } from './materials.js';
 import { AmbientMusic } from './music.js';
 import { Admin } from './admin.js';
 
@@ -46,10 +45,21 @@ ui.musicHud.addEventListener('click', toggleMusic);
 document.addEventListener('visibilitychange', () => music.setVisible(!document.hidden));
 
 // ---------------------------------------------------------------- graphics quality
-// "high" adds soft contact shadows, glow and see-through glass; phones start on "standard".
-let quality = SMALL_SCREEN ? 'standard' : 'high';
+// "high" adds soft contact shadows and glow. Phones, tablets and computers with built-in
+// (integrated) graphics start on "standard"; app.js also steps down on its own if frames are slow.
+function builtInGraphics() {
+  try {
+    const gl = renderer.getContext();
+    const info = gl.getExtension('WEBGL_debug_renderer_info');
+    const name = info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : '';
+    return /Intel|Iris|UHD|HD Graphics|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic/i.test(name);
+  } catch {
+    return false;
+  }
+}
+let quality = SMALL_SCREEN || builtInGraphics() ? 'standard' : 'high';
 try {
-  quality = localStorage.getItem('museum-quality') ?? quality;
+  quality = localStorage.getItem('museum-graphics') ?? quality; // only a choice made in the menu is saved
 } catch {}
 let onQuality = () => {};
 export const getQuality = () => quality;
@@ -57,16 +67,17 @@ export function onQualityChange(fn) {
   onQuality = fn;
   fn(quality);
 }
-function setQuality(q) {
+export function setQuality(q, { auto = false } = {}) {
   quality = q;
-  try {
-    localStorage.setItem('museum-quality', q);
-  } catch {}
-  ui.qualityBtn.textContent = q === 'high' ? 'Graphics: high' : 'Graphics: standard (faster)';
-  setGlassQuality(q === 'high');
+  if (!auto) {
+    try {
+      localStorage.setItem('museum-graphics', q);
+    } catch {}
+  }
+  ui.qualityBtn.textContent = q === 'high' ? 'Graphics: high' : auto ? 'Graphics: standard (lowered to keep it smooth)' : 'Graphics: standard (faster)';
   onQuality(q);
 }
-setQuality(quality);
+setQuality(quality, { auto: true });
 ui.qualityBtn.addEventListener('click', () => setQuality(quality === 'high' ? 'standard' : 'high'));
 
 // ---------------------------------------------------------------- start / pause
@@ -92,8 +103,6 @@ ui.enterTouch.addEventListener('click', () => {
   state.mode = 'touch';
   state.touchPlaying = true;
   document.body.classList.add('touch');
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5)); // easier on phone GPUs
-  window.dispatchEvent(new Event('resize'));
   music.start();
   ui.overlay.classList.add('hidden');
   // hide the browser bars where possible (Android, iPad); harmless where unsupported
