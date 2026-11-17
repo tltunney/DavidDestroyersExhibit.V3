@@ -3,8 +3,7 @@
 // and wood, the statue) reflect that photo instead of a generic studio. So the rotunda's marble floor
 // shows the red walls and columns around it, and the gallery glass shows the gallery.
 import * as THREE from 'three';
-import { renderer, scene, SMALL_SCREEN } from './engine.js';
-import { materialCopies, setGlassQuality } from './materials.js';
+import { renderer, scene, SMALL_SCREEN, refreshShadows } from './engine.js';
 
 // rooms: [{ room, group }]. Waits for textures and models to finish loading, then captures.
 export function captureReflectionsWhenLoaded(rooms) {
@@ -39,7 +38,6 @@ function capture(rooms) {
         if (!copies.has(m)) {
           const copy = Object.assign(m.clone(), { envMap: env });
           copies.set(m, copy);
-          materialCopies.set(m, [...(materialCopies.get(m) ?? []), copy]);
         }
         return copies.get(m);
       };
@@ -47,8 +45,8 @@ function capture(rooms) {
     });
   }
   for (const { group } of rooms) group.visible = true;
+  refreshShadows();
   scene.remove(cubeCamera);
   target.dispose();
   pmrem.dispose();
-  setGlassQuality(); // the copies take the current glass setting
 }

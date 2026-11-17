@@ -6,13 +6,22 @@ export const SMALL_SCREEN = window.matchMedia('(pointer: coarse)').matches; // p
 export const EYE_HEIGHT = 1.7;
 
 export const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+// At most 1.5 pixels per screen pixel: sharper than that costs a lot and looks the same.
+// app.js lowers it further on computers that can't keep up.
+export const MAX_PIXEL_RATIO = Math.min(window.devicePixelRatio, 1.5);
+renderer.setPixelRatio(MAX_PIXEL_RATIO);
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.AgXToneMapping;
 renderer.toneMappingExposure = 1.05;
 renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+// Nothing that casts a shadow ever moves, so shadows are drawn once (and again when something
+// loads) instead of on every frame.
+renderer.shadowMap.autoUpdate = false;
+export function refreshShadows() {
+  renderer.shadowMap.needsUpdate = true;
+}
 document.getElementById('app').appendChild(renderer.domElement);
 
 export const scene = new THREE.Scene();

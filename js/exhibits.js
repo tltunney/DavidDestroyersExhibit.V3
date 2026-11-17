@@ -7,6 +7,7 @@ import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import {
   FACING, PICTURE_RAIL_DROP, DOOR_W, DOOR_H, clearOfWainscot, parent, addBox, addCollider, mountOnWall, makeInteractive,
 } from './world.js';
+import { refreshShadows } from './engine.js';
 import { surfaceMaps } from './textures.js';
 import { MAT, displayMaterial, setMap, fitPhoto, addWallLighting, decal, GLOW_TEX } from './materials.js';
 import { artTexture, emptySlotTexture, labelTexture, textPanelTexture, plaqueTexture, posterTexture } from './art.js';
@@ -161,6 +162,7 @@ function buildPedestal(room, ex) {
         model.scale.setScalar(fit);
         model.position.sub(box.getCenter(new THREE.Vector3()).multiplyScalar(fit));
         holder.add(model);
+        refreshShadows();
       },
       undefined,
       () => console.warn(`Could not load model "${ex.model}".`),
@@ -196,8 +198,8 @@ function addSpot(x, y, z, target, intensity, angle, shadows) {
 // A monument plinth for a full-length statue: a cream marble step and moldings around a darker
 // veined marble die, with a bronze name plaque on the front. Its top is at height + 0.06.
 function buildMonumentPlinth(room, px, pz, w, h, turn, inscription) {
-  const light = new THREE.MeshPhysicalMaterial({ ...surfaceMaps('marble', '#e9e2d5', w, 0.5), roughness: 1, clearcoat: 0.4, clearcoatRoughness: 0.2 });
-  const dark = new THREE.MeshPhysicalMaterial({ ...surfaceMaps('marble', '#6b5d53', w, h), roughness: 1, clearcoat: 0.6, clearcoatRoughness: 0.12 });
+  const light = new THREE.MeshStandardMaterial({ ...surfaceMaps('marble', '#e9e2d5', w, 0.5), roughness: 1});
+  const dark = new THREE.MeshStandardMaterial({ ...surfaceMaps('marble', '#6b5d53', w, h), roughness: 1});
   const parts = [
     addBox(w + 0.34, 0.18, w + 0.34, light, px, 0.09, pz, true), // step
     addBox(w + 0.14, 0.1, w + 0.14, light, px, 0.23, pz), // base molding
@@ -223,15 +225,10 @@ function buildMonumentPlinth(room, px, pz, w, h, turn, inscription) {
 function carveInMarble(model, color = '#f1eee8') {
   let hasShading = false;
   model.traverse((m) => (hasShading ||= !!m.geometry?.attributes.color));
-  const material = new THREE.MeshPhysicalMaterial({
+  const material = new THREE.MeshStandardMaterial({
     ...surfaceMaps('marble', color, 1.5, 1.5),
     roughness: 0.9, // the map's roughness is low, so this ends up softly polished
     normalScale: new THREE.Vector2(0.3, 0.3),
-    clearcoat: 0.25,
-    clearcoatRoughness: 0.35,
-    sheen: 0.4, // light scattering just under the surface gives marble its soft glow
-    sheenRoughness: 0.8,
-    sheenColor: new THREE.Color(0xfff4e6),
     vertexColors: hasShading,
   });
   model.updateMatrixWorld(true);

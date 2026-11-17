@@ -189,7 +189,7 @@ function buildMonstera(g, seed) {
 // curling hooks, with an overcoat, a bowler hat and a furled umbrella. Made for a back-left corner:
 // the coat faces +x, -z.
 const COAT_MAT = {
-  wool: new THREE.MeshPhysicalMaterial({ color: 0x23293a, roughness: 0.95, sheen: 0.6, sheenRoughness: 0.7, sheenColor: new THREE.Color(0x4a5470) }),
+  wool: new THREE.MeshStandardMaterial({ color: 0x23293a, roughness: 0.95 }),
   felt: new THREE.MeshStandardMaterial({ color: 0x1b1714, roughness: 0.8 }),
   silk: new THREE.MeshStandardMaterial({ color: 0x141414, roughness: 0.45 }),
   horn: new THREE.MeshStandardMaterial({ color: 0x3b2416, roughness: 0.3 }),
@@ -379,7 +379,7 @@ export function buildStanchionLine(room, points) {
 function buildRug(room, item) {
   const w = item.w ?? 6;
   const d = item.d ?? 4;
-  const top = new THREE.MeshPhysicalMaterial({ map: rugTexture(`rug${item.x},${item.z}`), roughness: 1, sheen: 0.8, sheenRoughness: 0.8, sheenColor: new THREE.Color(0x8a4a3a) }); // wool pile
+  const top = new THREE.MeshStandardMaterial({ map: rugTexture(`rug${item.x},${item.z}`), roughness: 1 }); // wool pile
   const side = new THREE.MeshStandardMaterial({ color: 0x5a1815, roughness: 1 });
   const rug = new THREE.Mesh(new THREE.BoxGeometry(w, 0.012, d), [side, side, top, side, side, side]);
   rug.position.set(room.x + (item.x ?? 0), 0.006, room.z + (item.z ?? 0));
@@ -414,7 +414,7 @@ function buildBanner(room, item) {
   const pos = geo.attributes.position;
   for (let i = 0; i < pos.count; i++) pos.setZ(i, Math.sin(pos.getX(i) * 11) * 0.012); // gentle folds
   geo.computeVertexNormals();
-  const cloth = piece(g, geo, new THREE.MeshPhysicalMaterial({ map: bannerTexture(item.title ?? '', item.subtitle ?? '', item.color ?? '#6e1b21'), roughness: 0.85, sheen: 0.5, sheenRoughness: 0.6, side: THREE.DoubleSide }), 0, top - 0.04 - H / 2, 0);
+  const cloth = piece(g, geo, new THREE.MeshStandardMaterial({ map: bannerTexture(item.title ?? '', item.subtitle ?? '', item.color ?? '#6e1b21'), roughness: 0.85, side: THREE.DoubleSide }), 0, top - 0.04 - H / 2, 0);
   cloth.castShadow = true;
   piece(g, new THREE.CylinderGeometry(0.018, 0.018, W + 0.16, 12).rotateZ(Math.PI / 2), MAT.gilt, 0, top, 0).castShadow = true;
   for (const s of [-1, 1]) {
